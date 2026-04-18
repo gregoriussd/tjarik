@@ -2,8 +2,8 @@ import 'package:ppb_midterm_project/screens/login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
 
   void logout(context) async {
     await FirebaseAuth.instance.signOut();

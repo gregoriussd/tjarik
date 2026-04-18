@@ -1,25 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final FirebaseStorage storage;
+
+  const DashboardScreen({super.key, required this.storage});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  // list map nama bating dengan path file di firebase storage, akan digantikan dengan relational DB
   final List<Map<String, String>> batikList = [
-    {'name': 'Batik Betawi', 'image': 'assets/batik/batik_betawi.jpg'},
-    {'name': 'Batik Kawung', 'image': 'assets/batik/batik_kawung.jpg'},
-    {'name': 'Batik Lereng', 'image': 'assets/batik/batik_lereng.jpg'},
-    {'name': 'Batik Mega Mendung', 'image': 'assets/batik/batik_megamendung.jpg'},
-    {'name': 'Batik Parang', 'image': 'assets/batik/batik_parang.jpg'},
-    {'name': 'Batik Sekar Jagad', 'image': 'assets/batik/batik_sekarjagad.jpg'},
-    {'name': 'Batik Sidomukti', 'image': 'assets/batik/batik_sidomukti.jpg'},
-    {'name': 'Batik Simbut', 'image': 'assets/batik/batik_simbut.jpg'},
-    {'name': 'Batik Sogan', 'image': 'assets/batik/batik_sogan.jpg'},
-    {'name': 'Batik Tujuh Rupa', 'image': 'assets/batik/batik_tujuhrupa.jpg'},
+    {'name': 'Batik Betawi', 'file': 'batik_betawi.jpg'},
+    {'name': 'Batik Kawung', 'file': 'batik_kawung.jpg'},
+    {'name': 'Batik Lereng', 'file': 'batik_lereng.jpg'},
+    {'name': 'Batik Mega Mendung', 'file': 'batik_megamendung.jpg'},
+    {'name': 'Batik Parang', 'file': 'batik_parang.jpg'},
+    {'name': 'Batik Sekar Jagad', 'file': 'batik_sekarjagad.jpg'},
+    {'name': 'Batik Sidomukti', 'file': 'batik_sidomukti.jpg'},
+    {'name': 'Batik Simbut', 'file': 'batik_simbut.jpg'},
+    {'name': 'Batik Sogan', 'file': 'batik_sogan.jpg'},
+    {'name': 'Batik Tujuh Rupa', 'file': 'batik_tujuhrupa.jpg'},
   ];
+
+  Future<String> getImageUrl(String fileName) async {
+    try {
+      final ref = widget.storage.ref().child('default/$fileName');
+      final url = await ref.getDownloadURL();
+      return url;
+    } catch (e) {
+      print('Error getting image URL: $e');
+      return '';
+    }
+  }
 
   void navigateCameraPreview () {
     if (!context.mounted) return;
@@ -60,11 +75,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     topLeft: Radius.circular(14),
                     bottomLeft: Radius.circular(14),
                   ),
-                  child: Image.asset(
-                    item['image']!,
-                    width: 120,
-                    height: 110,
-                    fit: BoxFit.cover,
+                  child: FutureBuilder<String>(
+                    future: getImageUrl(item['file']!),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                          return Image.network(
+                            snapshot.data!,
+                            width: 120,
+                            height: 110,
+                            fit: BoxFit.cover,
+                          );
+                        } else {
+                          return Container(
+                            width: 120,
+                            height: 110,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.error),
+                          );
+                        }
+                      } else {
+                        return Container(
+                          width: 120,
+                          height: 110,
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: SizedBox(
+                              width: 30,
+                              height: 30,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),

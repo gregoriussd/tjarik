@@ -1,8 +1,8 @@
-import 'package:ppb_midterm_project/screens/dashboard.dart';
-import 'package:ppb_midterm_project/screens/profile.dart';
-import 'package:ppb_midterm_project/screens/login.dart';
-import 'package:ppb_midterm_project/screens/register.dart';
-import 'package:ppb_midterm_project/screens/camera_preview.dart';
+import 'package:tjarik/screens/dashboard.dart';
+import 'package:tjarik/screens/profile.dart';
+import 'package:tjarik/screens/login.dart';
+import 'package:tjarik/screens/register.dart';
+import 'package:tjarik/screens/camera_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';

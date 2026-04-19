@@ -1,4 +1,4 @@
-package com.example.ppb_midterm_project
+package com.example.tjarik
 
 import io.flutter.embedding.android.FlutterActivity
 

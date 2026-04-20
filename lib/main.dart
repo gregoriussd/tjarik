@@ -1,3 +1,4 @@
+import 'package:firebase_ai/firebase_ai.dart';
 import 'package:tjarik/screens/dashboard.dart';
 import 'package:tjarik/screens/profile.dart';
 import 'package:tjarik/screens/login.dart';
@@ -17,15 +18,31 @@ void main() async {
   final cameras = await availableCameras();
   final firstCamera = cameras.first;
   final storage = FirebaseStorage.instance;
+  final model = FirebaseAI.googleAI().generativeModel(
+    model: 'gemini-2.5-flash',
+    generationConfig: GenerationConfig(
+      responseMimeType: 'application/json',
+      responseSchema: Schema.object(
+        properties: {
+          'name': Schema.string(),
+          'filosofi': Schema.string(),
+        },
+        optionalProperties: const [],
+        propertyOrdering: const ['name', 'filosofi'],
+      ),
+      temperature: 0.2,
+    ),
+  );
 
-  runApp(MyApp(camera: firstCamera, storage: storage));
+  runApp(MyApp(camera: firstCamera, storage: storage, model: model));
 }
 
 class MyApp extends StatelessWidget {
   final CameraDescription camera;
   final FirebaseStorage storage;
+  final GenerativeModel model;
 
-  const MyApp({super.key, required this.camera, required this.storage});
+  const MyApp({super.key, required this.camera, required this.storage, required this.model});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +50,7 @@ class MyApp extends StatelessWidget {
       'home': (context) => DashboardScreen(storage: storage),
       'login': (context) => const LoginScreen(),
       'register': (context) => const RegisterScreen(),
-      'camera': (context) => CameraPreviewScreen(camera: camera, storage: storage),
+      'camera': (context) => CameraPreviewScreen(camera: camera, storage: storage, model: model),
       'profile': (context) => const ProfileScreen(),
     });
   }

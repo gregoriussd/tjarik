@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CameraPreviewScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -17,6 +18,8 @@ class CameraPreviewScreen extends StatefulWidget {
 class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
+
+  final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
 
   @override
@@ -35,6 +38,15 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
     super.dispose();
   }
 
+  Future<String> _uploadImage(XFile image) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final imageName = '${timestamp}_${image.name}';
+    final ref = widget.storage.ref().child('user/$imageName');
+
+    await ref.putFile(File(image.path));
+    return ref.getDownloadURL();
+  }
+
   Future<String> takePicture() async {
     if (_isUploading) return '';
 
@@ -45,12 +57,7 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
     try {
       await _initializeControllerFuture;
       final image = await _controller.takePicture();
-
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final imageName = '${timestamp}_${image.name}';
-      final ref = widget.storage.ref().child('user/$imageName');
-      
-      await ref.putFile(File(image.path));
+      final url = await _uploadImage(image);
 
       // [FUTURE] Simpan image path di database relasional
 
@@ -64,7 +71,6 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
         const SnackBar(content: Text('Picture saved to Firebase Storage')),
       );
 
-      final url = await ref.getDownloadURL();
       return url; // For future use
     } catch (e) {
       if (mounted) {
@@ -77,6 +83,37 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
           _isUploading = false;
         });
       }
+    }
+  }
+
+  Future<String> pickFromGallery() async {
+    if (_isUploading) return '';
+
+    setState(() => _isUploading = true);
+    try {
+      final image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+      );
+      if (image == null) return '';
+
+      final url = await _uploadImage(image);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image uploaded from gallery')),
+        );
+      }
+      return url;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gallery upload failed: $e')),
+        );
+      }
+      return '';
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
     }
   }
 
@@ -120,16 +157,22 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
           ),                  
         ],
       ),
-
-      floatingActionButton: FloatingActionButton(
-        onPressed: _isUploading ? null : () async => await takePicture(),
-        child: _isUploading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.camera),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'galleryBtn',
+            onPressed: _isUploading ? null : () async => await pickFromGallery(),
+            child: const Icon(Icons.photo_library),
+          ),
+          const SizedBox(width: 16),
+          FloatingActionButton(
+            heroTag: 'cameraBtn',
+            onPressed: _isUploading ? null : () async => await takePicture(),
+            child: const Icon(Icons.camera_alt),
+          ),
+        ],
       ),
     );
   }

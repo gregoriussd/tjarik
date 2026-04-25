@@ -41,6 +41,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Navigator.pushReplacementNamed(context, 'camera');
   }
 
+  void navigateCollection () {
+    if (!context.mounted) return;
+    Navigator.pushReplacementNamed(context, 'collection');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,12 +132,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-      onPressed: () {
-        navigateCameraPreview();
-      },
-      child: Icon(Icons.add),
-    ),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'dashboardCameraBtn',
+            onPressed: () {
+              navigateCameraPreview();
+            },
+            child: Icon(Icons.add),
+          ),
+          const SizedBox(width: 16),
+          FloatingActionButton(
+            heroTag: 'dashboardCollectionBtn',
+            onPressed: () {
+              navigateCollection();
+            },
+            child: const Icon(Icons.collections),
+          ),
+        ],
+      ),
     );
   }
 }

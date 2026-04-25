@@ -1,5 +1,6 @@
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:tjarik/screens/dashboard.dart';
+import 'package:tjarik/screens/collection.dart';
 import 'package:tjarik/screens/profile.dart';
 import 'package:tjarik/screens/login.dart';
 import 'package:tjarik/screens/register.dart';
@@ -12,9 +13,7 @@ import 'package:camera/camera.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final cameras = await availableCameras();
   final firstCamera = cameras.first;
   final storage = FirebaseStorage.instance;
@@ -25,10 +24,12 @@ void main() async {
       responseSchema: Schema.object(
         properties: {
           'name': Schema.string(),
-          'filosofi': Schema.string(),
+          'origin': Schema.string(),
+          'philosophy': Schema.string(),
+          'confidence': Schema.number(),
         },
         optionalProperties: const [],
-        propertyOrdering: const ['name', 'filosofi'],
+        propertyOrdering: const ['name', 'origin', 'philosophy', 'confidence'],
       ),
       temperature: 0.2,
     ),
@@ -42,16 +43,26 @@ class MyApp extends StatelessWidget {
   final FirebaseStorage storage;
   final GenerativeModel model;
 
-  const MyApp({super.key, required this.camera, required this.storage, required this.model});
+  const MyApp({
+    super.key,
+    required this.camera,
+    required this.storage,
+    required this.model,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(initialRoute: 'login', routes: {
-      'home': (context) => DashboardScreen(storage: storage),
-      'login': (context) => const LoginScreen(),
-      'register': (context) => const RegisterScreen(),
-      'camera': (context) => CameraPreviewScreen(camera: camera, storage: storage, model: model),
-      'profile': (context) => const ProfileScreen(),
-    });
+    return MaterialApp(
+      initialRoute: 'login',
+      routes: {
+        'home': (context) => DashboardScreen(storage: storage),
+        'login': (context) => const LoginScreen(),
+        'register': (context) => const RegisterScreen(),
+        'camera': (context) =>
+            CameraPreviewScreen(camera: camera, storage: storage, model: model),
+        'profile': (context) => const ProfileScreen(),
+        'collection': (context) => CollectionScreen(storage: storage),
+      },
+    );
   }
 }

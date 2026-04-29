@@ -7,7 +7,7 @@ class BatikScan {
   final double confidence;
   final String origin;
   final String philosophy;
-  final String imagePath;
+  final String imageUrl;
   final String personalNote;
   final DateTime createdAt;
 
@@ -18,7 +18,7 @@ class BatikScan {
     required this.confidence,
     required this.origin,
     required this.philosophy,
-    required this.imagePath,
+    required this.imageUrl,
     required this.personalNote,
     required this.createdAt
   });
@@ -31,7 +31,7 @@ class BatikScan {
       motifName: data['motif_name'] ?? '',
       origin: data['origin'] ?? '',
       philosophy: data['philosophy'] ?? '',
-      imagePath: data['image_path'] ?? '',
+      imageUrl: data['image_url'] ?? '',
       confidence: (data['confidence'] ?? 0.0).toDouble(),
       personalNote: data['personal_note'],
       createdAt: (data['created_at'] as Timestamp).toDate(),
@@ -44,9 +44,49 @@ class BatikScan {
       'motif_name': motifName,
       'origin': origin,
       'philosophy': philosophy,
-      'image_path': imagePath,
+      'image_url': imageUrl,
       'confidence': confidence,
       'personal_note': personalNote,
+      'created_at': Timestamp.fromDate(createdAt),
+    };
+  }
+}
+
+class BatikDefault {
+  final String? id;
+  final String motifName;
+  final String origin;
+  final String philosophy;
+  final String imageUrl;
+  final DateTime createdAt;
+
+  BatikDefault({
+    this.id,
+    required this.motifName,
+    required this.origin,
+    required this.philosophy,
+    required this.imageUrl,
+    required this.createdAt,
+  });
+
+  factory BatikDefault.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return BatikDefault(
+      id: doc.id,
+      motifName: data['motif_name'] ?? '',
+      origin: data['origin'] ?? '',
+      philosophy: data['philosophy'] ?? '',
+      imageUrl: data['image_url'] ?? '',
+      createdAt: (data['created_at'] as Timestamp).toDate(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'motif_name': motifName,
+      'origin': origin,
+      'philosophy': philosophy,
+      'image_url': imageUrl,
       'created_at': Timestamp.fromDate(createdAt),
     };
   }

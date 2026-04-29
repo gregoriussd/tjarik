@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
+import 'package:tjarik/models/batik_model.dart';
+import 'package:tjarik/screens/batik_detail.dart';
+import 'package:tjarik/widgets/bottom_navbar.dart';
 
 class DashboardScreen extends StatefulWidget {
   final FirebaseStorage storage;
@@ -11,37 +16,28 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // list map nama bating dengan path file di firebase storage, akan digantikan dengan relational DB
-  final List<Map<String, String>> batikList = [
-    {'name': 'Batik Betawi', 'file': 'batik_betawi.jpg'},
-    {'name': 'Batik Kawung', 'file': 'batik_kawung.jpg'},
-    {'name': 'Batik Lereng', 'file': 'batik_lereng.jpg'},
-    {'name': 'Batik Mega Mendung', 'file': 'batik_megamendung.jpg'},
-    {'name': 'Batik Parang', 'file': 'batik_parang.jpg'},
-    {'name': 'Batik Sekar Jagad', 'file': 'batik_sekarjagad.jpg'},
-    {'name': 'Batik Sidomukti', 'file': 'batik_sidomukti.jpg'},
-    {'name': 'Batik Simbut', 'file': 'batik_simbut.jpg'},
-    {'name': 'Batik Sogan', 'file': 'batik_sogan.jpg'},
-    {'name': 'Batik Tujuh Rupa', 'file': 'batik_tujuhrupa.jpg'},
-  ];
+  final FirebaseFirestore _db = FirebaseFirestore.instanceFor(
+    app: Firebase.app(),
+    databaseId: 'tjarik-db',
+  );
+  int _currentNavIndex = 0;
 
-  Future<String> getImageUrl(String fileName) async {
-    try {
-      final ref = widget.storage.ref().child('default/$fileName');
-      final url = await ref.getDownloadURL();
-      return url;
-    } catch (e) {
-      print('Error getting image URL: $e');
-      return '';
-    }
+  Stream<List<BatikDefault>> getDefaultBatiks() {
+    return _db.collection('batik_defaults').snapshots().map((snapshot) {
+      final batiks = snapshot.docs
+          .map((doc) => BatikDefault.fromFirestore(doc))
+          .toList();
+      batiks.sort((a, b) => a.motifName.compareTo(b.motifName));
+      return batiks;
+    });
   }
 
-  void navigateCameraPreview () {
+  void navigateCameraPreview() {
     if (!context.mounted) return;
     Navigator.pushReplacementNamed(context, 'camera');
   }
 
-  void navigateCollection () {
+  void navigateCollection() {
     if (!context.mounted) return;
     Navigator.pushReplacementNamed(context, 'collection');
   }
@@ -50,109 +46,171 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Dashboard"),
-        centerTitle: true,
+        title: const Text(
+          "Dashboard",
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        centerTitle: false,
+        elevation: 0,
+        backgroundColor: const Color(0xFFF7F8FA),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: batikList.length,
-        itemBuilder: (context, index) {
-          final item = batikList[index];
+      backgroundColor: const Color(0xFFF7F8FA),
+      body: StreamBuilder<List<BatikDefault>>(
+        stream: getDefaultBatiks(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          return Container(
-            height: 110,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(20),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Failed to load dashboard: ${snapshot.error}',
+                textAlign: TextAlign.center,
+              ),
+            );
+          }
+
+          final batiks = snapshot.data ?? [];
+
+          if (batiks.isEmpty) {
+            return const Center(
+              child: Text(
+                'No batik defaults found.',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            );
+          }
+
+          return GridView.builder(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.85,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 20,
             ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(14),
-                    bottomLeft: Radius.circular(14),
-                  ),
-                  child: FutureBuilder<String>(
-                    future: getImageUrl(item['file']!),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                          return Image.network(
-                            snapshot.data!,
-                            width: 120,
-                            height: 110,
-                            fit: BoxFit.cover,
-                          );
-                        } else {
-                          return Container(
-                            width: 120,
-                            height: 110,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.error),
-                          );
-                        }
-                      } else {
-                        return Container(
-                          width: 120,
-                          height: 110,
-                          color: Colors.grey[300],
-                          child: const Center(
-                            child: SizedBox(
-                              width: 30,
-                              height: 30,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    item['name']!,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+            itemCount: batiks.length,
+            itemBuilder: (context, index) {
+              final batik = batiks[index];
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BatikDetailScreen(batik: batik),
                     ),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(12),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                        child: batik.imageUrl.isNotEmpty
+                            ? Image.network(
+                                batik.imageUrl,
+                                height: 140,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) {
+                                        return child;
+                                      }
+                                      return Container(
+                                        height: 140,
+                                        color: Colors.grey[200],
+                                        child: const Center(
+                                          child: SizedBox(
+                                            width: 30,
+                                            height: 30,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation(
+                                                    Color(0xFF1E6FE8),
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 140,
+                                    color: Colors.grey[200],
+                                    child: const Icon(
+                                      Icons.error_outline,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Container(
+                                height: 140,
+                                color: Colors.grey[200],
+                                child: const Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                batik.motifName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.clip,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
-      floatingActionButton: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton(
-            heroTag: 'dashboardCameraBtn',
-            onPressed: () {
-              navigateCameraPreview();
-            },
-            child: Icon(Icons.add),
-          ),
-          const SizedBox(width: 16),
-          FloatingActionButton(
-            heroTag: 'dashboardCollectionBtn',
-            onPressed: () {
-              navigateCollection();
-            },
-            child: const Icon(Icons.collections),
-          ),
-        ],
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentNavIndex,
+        onTap: (index) {
+          setState(() => _currentNavIndex = index);
+        },
       ),
     );
   }
 }
-

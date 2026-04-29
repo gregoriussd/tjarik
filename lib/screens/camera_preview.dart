@@ -13,6 +13,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tjarik/models/batik_model.dart';
 import 'package:tjarik/services/database_service.dart';
+import 'package:tjarik/services/notification_service.dart';
+import 'package:tjarik/widgets/bottom_navbar.dart';
 
 class CameraPreviewScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -36,6 +38,7 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
 
   final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
+  int _currentNavIndex = 2;
 
   @override
   void initState() {
@@ -136,7 +139,8 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
     final ref = widget.storage.ref().child(imagePath);
 
     await ref.putFile(imageFile);
-    return imagePath;
+    final url = ref.getDownloadURL();
+    return url;
   }
 
   Future<void> _showAnalysisAndAskSave({
@@ -223,12 +227,18 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
           motifName: motifName,
           origin: origin,
           philosophy: philosophy,
-          imagePath: await _uploadImage(compressedFile),
+          imageUrl: await _uploadImage(compressedFile),
           confidence: confidence,
           personalNote: personalNote,
           createdAt: DateTime.now(),
         );
         await DatabaseService().saveBatikScan(newScan);
+        await NotificationService.createNotification(
+          id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          title: 'Tersimpan',
+          body: 'Hasil scan "${motifName}" berhasil disimpan ke Firebase.',
+          payload: {'scanAt': newScan.createdAt.toIso8601String()},
+        );
       }
 
       if (!mounted) return;
@@ -250,6 +260,12 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
       final image = await _controller.takePicture();
 
       final analysis = await _analyzeImage(image);
+      await NotificationService.createNotification(
+        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title: 'Analisis selesai',
+        body:
+        '${(analysis['name'] ?? 'Tidak ditemukan')} — Confidence: ${((analysis['confidence'] ?? 0.0) * 100).toStringAsFixed(1)}%',
+      );
       await _showAnalysisAndAskSave(image: image, analysis: analysis);
     } catch (e) {
       if (mounted) {
@@ -280,6 +296,12 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
       if (image == null) return;
 
       final analysis = await _analyzeImage(image);
+      await NotificationService.createNotification(
+        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title: 'Analisis selesai',
+        body:
+        '${(analysis['name'] ?? 'Tidak ditemukan')} — Confidence: ${((analysis['confidence'] ?? 0.0) * 100).toStringAsFixed(1)}%',
+      );
       await _showAnalysisAndAskSave(image: image, analysis: analysis);
     } catch (e) {
       if (mounted) {
@@ -301,7 +323,25 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Camera Access')),
+      appBar: AppBar(
+        title: const Text(
+          "Scan Your Batik",
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        centerTitle: false,
+        elevation: 0,
+        backgroundColor: const Color(0xFFF7F8FA),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentNavIndex,
+        onTap: (index) {
+          setState(() => _currentNavIndex = index);
+        },
+      ),
       body: Stack(
         children: [
           FutureBuilder<void>(
@@ -347,19 +387,19 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
             onPressed: _isUploading ? null : pickFromGallery,
             child: const Icon(Icons.photo_library),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 100),
           FloatingActionButton(
             heroTag: 'cameraShutterBtn',
             onPressed: _isUploading ? null : takePicture,
             child: const Icon(Icons.camera_alt),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 100),
           FloatingActionButton(
-            heroTag: 'cameraHomeBtn',
+            heroTag: 'cameraSwitchBtn',
             onPressed: () {
-              navigateDashboard();
+              // FOR FUTURE FEATURE
             },
-            child: Icon(Icons.home),
+            child: Icon(Icons.cameraswitch),
           ),
         ],
       ),

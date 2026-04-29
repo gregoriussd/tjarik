@@ -10,6 +10,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'firebase_options.dart';
 import 'package:camera/camera.dart';
+import 'package:tjarik/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,8 @@ void main() async {
       temperature: 0.2,
     ),
   );
+
+  await NotificationService.initializeNotification();
 
   runApp(MyApp(camera: firstCamera, storage: storage, model: model));
 }
